@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Random Clip Drawing</title>
+    <title>NE Drawing</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -48,7 +48,6 @@
                         let y = (canvas.height - img.height * scale) / 2;
                         ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
                         imgData.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
                         document.getElementById("feedbackMessage").textContent = "Image loaded. Now draw on the canvas.";
                     };
                     img.src = e.target.result;
@@ -67,12 +66,16 @@
 
             if (imgData.length > 0) {
                 let randomImgData = imgData[Math.floor(Math.random() * imgData.length)];
-                ctx.putImageData(randomImgData, 0, 0);
+                let tempCanvas = document.createElement('canvas');
+                let tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                tempCtx.putImageData(randomImgData, 0, 0);
 
                 let randomX = Math.floor(Math.random() * (canvas.width - clipSize));
                 let randomY = Math.floor(Math.random() * (canvas.height - clipSize));
 
-                let clippedImage = ctx.getImageData(randomX, randomY, clipSize, clipSize);
+                let clippedImage = tempCtx.getImageData(randomX, randomY, clipSize, clipSize);
 
                 ctx.putImageData(clippedImage, canvasX - clipSize / 2, canvasY - clipSize / 2);
             }
