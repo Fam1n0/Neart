@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Clip Drawing</title>
+</head>
+<body>
+    <input type="file" id="imageInput">
+    <canvas id="drawingCanvas" width="400" height="400" style="border: 1px solid;"></canvas>
+
+    <script>
+        const canvas = document.getElementById("drawingCanvas");
+        const ctx = canvas.getContext("2d");
+        let imgData;
+        let isDrawing = false;
+
+        document.getElementById("imageInput").addEventListener("change", function(event) {
+            let file = event.target.files[0];
+            if (file) {
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    let img = new Image();
+                    img.onload = function() {
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function draw(event) {
+            if (isDrawing && imgData) {
+                let clipSize = 20;
+
+                let x = Math.floor(Math.random() * (canvas.width - clipSize));
+                let y = Math.floor(Math.random() * (canvas.height - clipSize));
+
+                let clippedImage = ctx.getImageData(x, y, clipSize, clipSize);
+                
+                ctx.putImageData(clippedImage, event.clientX - canvas.offsetLeft - clipSize / 2, event.clientY - canvas.offsetTop - clipSize / 2);
+            }
+        }
+
+        // Mouse events
+        canvas.addEventListener("mousedown", () => isDrawing = true);
+        canvas.addEventListener("mouseup", () => isDrawing = false);
+        canvas.addEventListener("mousemove", draw);
+
+        // Touch events for mobile
+        canvas.addEventListener("touchstart", function(e) {
+            e.preventDefault();
+            isDrawing = true;
+        });
+        canvas.addEventListener("touchend", () => isDrawing = false);
+        canvas.addEventListener("touchmove", function(e) {
+            e.preventDefault();
+            let touch = e.touches[0];
+            draw(touch);
+        });
+    </script>
+</body>
+</html>
