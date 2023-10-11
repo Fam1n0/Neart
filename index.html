@@ -20,12 +20,15 @@
 <body>
     <input type="file" id="imageInput">
     <div id="feedbackMessage"></div>
+    <label>Clip Size: <input type="range" id="clipSizeSlider" min="5" max="100" value="20"></label>
+    <button id="clearCanvas">Clear Canvas</button>
     <canvas id="drawingCanvas" width="400" height="400" style="border: 1px solid;"></canvas>
 
     <script>
         const canvas = document.getElementById("drawingCanvas");
         const ctx = canvas.getContext("2d");
-        let imgData;
+        const clipSizeSlider = document.getElementById("clipSizeSlider");
+        let imgData = [];
         let isDrawing = false;
 
         document.getElementById("imageInput").addEventListener("change", function (event) {
@@ -44,7 +47,7 @@
                         let x = (canvas.width - img.width * scale) / 2;
                         let y = (canvas.height - img.height * scale) / 2;
                         ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-                        imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        imgData.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
                         ctx.clearRect(0, 0, canvas.width, canvas.height);
                         document.getElementById("feedbackMessage").textContent = "Image loaded. Now draw on the canvas.";
                     };
@@ -55,13 +58,16 @@
         });
 
         function draw(event, x, y) {
-            if (isDrawing && imgData) {
-                let clipSize = 20;
-                let canvasX = x - canvas.offsetLeft;
-                let canvasY = y - canvas.offsetTop;
+            let clipSize = parseInt(clipSizeSlider.value, 10);
+            let canvasX = x - canvas.offsetLeft;
+            let canvasY = y - canvas.offsetTop;
 
-                // Check boundary conditions
-                if (canvasX < 0 || canvasY < 0 || canvasX > canvas.width || canvasY > canvas.height) return;
+            // Check boundary conditions
+            if (canvasX < 0 || canvasY < 0 || canvasX > canvas.width || canvasY > canvas.height) return;
+
+            if (imgData.length > 0) {
+                let randomImgData = imgData[Math.floor(Math.random() * imgData.length)];
+                ctx.putImageData(randomImgData, 0, 0);
 
                 let randomX = Math.floor(Math.random() * (canvas.width - clipSize));
                 let randomY = Math.floor(Math.random() * (canvas.height - clipSize));
@@ -87,6 +93,10 @@
             e.preventDefault();
             let touch = e.touches[0];
             draw(e, touch.clientX, touch.clientY);
+        });
+
+        document.getElementById("clearCanvas").addEventListener("click", function () {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
         });
     </script>
 </body>
