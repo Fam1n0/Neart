@@ -32,23 +32,28 @@
         let isDrawing = false;
         let validRegions = [];
 
+        function isRegionMostlyWhite(regionData) {
+            let whiteThreshold = 240; // Pixels above this value are considered white
+            let whitePixelCount = 0;
+            for (let i = 0; i < regionData.data.length; i += 4) {
+                let r = regionData.data[i];
+                let g = regionData.data[i + 1];
+                let b = regionData.data[i + 2];
+                if (r >= whiteThreshold && g >= whiteThreshold && b >= whiteThreshold) {
+                    whitePixelCount++;
+                }
+            }
+            // Consider regions as white if more than 75% of pixels are white
+            return (whitePixelCount / (regionData.data.length / 4)) > 0.75;
+        }
+
         function updateValidRegions() {
             let clipSize = parseInt(clipSizeSlider.value, 10);
             validRegions = [];
             for (let y = 0; y < canvas.height - clipSize; y += clipSize) {
                 for (let x = 0; x < canvas.width - clipSize; x += clipSize) {
                     let regionData = ctx.getImageData(x, y, clipSize, clipSize);
-                    let isWhite = true;
-                    for (let i = 0; i < regionData.data.length; i += 4) {
-                        let r = regionData.data[i];
-                        let g = regionData.data[i + 1];
-                        let b = regionData.data[i + 2];
-                        if (r < 240 || g < 240 || b < 240) {
-                            isWhite = false;
-                            break;
-                        }
-                    }
-                    if (!isWhite) {
+                    if (!isRegionMostlyWhite(regionData)) {
                         validRegions.push({ x: x, y: y });
                     }
                 }
@@ -108,7 +113,7 @@
         canvas.addEventListener("mousedown", () => isDrawing = true);
         canvas.addEventListener("mouseup", () => isDrawing = false);
         canvas.addEventListener("mousemove", (event) => draw(event, event.clientX, event.clientY));
-        
+
         canvas.addEventListener("touchstart", function (e) {
             e.preventDefault();
             isDrawing = true;
@@ -122,8 +127,16 @@
 
         document.getElementById("clearCanvas").addEventListener("click", function () {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            validRegions = []; // Also clear valid regions since there's no image now
+            if (imgData.length > 0) {
+                let tempCanvas = document.createElement('canvas');
+                let tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                tempCtx.putImageData(imgData[imgData.length - 1], 0, 0);
+                updateValidRegions();
+            }
         });
+
     </script>
 </body>
 
