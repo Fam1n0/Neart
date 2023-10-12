@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,77 +7,69 @@
     <style>
         body {
             font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            text-align: center;
+            margin-top: 5%;
         }
-
-        #feedbackMessage {
-            margin: 10px 0;
-            color: green;
+        #drawingCanvas {
+            border: 1px solid #000;
+            max-width: 100vw;
+            margin-top: 10px;
+        }
+        button, input[type="range"], label {
+            margin-top: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
         }
     </style>
 </head>
-
 <body>
+    <h2>Upload and Draw with Random Clips</h2>
     <input type="file" id="imageInput">
-    <div id="feedbackMessage"></div>
-    <label>Clip Size: <input type="range" id="clipSizeSlider" min="5" max="100" value="20"></label>
-    <button id="clearCanvas">Clear Canvas</button>
-    <canvas id="drawingCanvas" width="400" height="400" style="border: 1px solid;"></canvas>
+    <br>
+    <label for="clipSizeRange">Clip Size: <span id="clipSizeLabel">20</span></label>
+    <input type="range" id="clipSizeRange" min="10" max="100" value="20">
+    <br>
+    <canvas id="drawingCanvas"></canvas>
+    <br>
+    <button id="saveButton">Save Canvas</button>
+    <button id="clearButton">Clear Canvas</button>
 
     <script>
         const canvas = document.getElementById("drawingCanvas");
         const ctx = canvas.getContext("2d");
-        const clipSizeSlider = document.getElementById("clipSizeSlider");
-        let imgData = [];
+        const clipSizeRange = document.getElementById("clipSizeRange");
+        const clipSizeLabel = document.getElementById("clipSizeLabel");
+        const MAX_WIDTH = window.innerWidth * 0.9; // 90% of window width
+        const MAX_HEIGHT = window.innerHeight * 0.6; // 60% of window height
+
+        let clipSize = parseInt(clipSizeRange.value);
         let isDrawing = false;
-        let validRegions = [];
+        let currentImage = null; // Store the loaded image
 
-        function isRegionMostlyWhite(regionData) {
-            let whiteThreshold = 240; // Pixels above this value are considered white
-            let whitePixelCount = 0;
-            for (let i = 0; i < regionData.data.length; i += 4) {
-                let r = regionData.data[i];
-                let g = regionData.data[i + 1];
-                let b = regionData.data[i + 2];
-                if (r >= whiteThreshold && g >= whiteThreshold && b >= whiteThreshold) {
-                    whitePixelCount++;
-                }
-            }
-            // Consider regions as white if more than 75% of pixels are white
-            return (whitePixelCount / (regionData.data.length / 4)) > 0.75;
-        }
+        clipSizeRange.addEventListener('input', function() {
+            clipSize = parseInt(clipSizeRange.value);
+            clipSizeLabel.textContent = clipSize;
+        });
 
-        function updateValidRegions() {
-            let clipSize = parseInt(clipSizeSlider.value, 10);
-            validRegions = [];
-            for (let y = 0; y < canvas.height - clipSize; y += clipSize) {
-                for (let x = 0; x < canvas.width - clipSize; x += clipSize) {
-                    let regionData = ctx.getImageData(x, y, clipSize, clipSize);
-                    if (!isRegionMostlyWhite(regionData)) {
-                        validRegions.push({ x: x, y: y });
-                    }
-                }
-            }
-        }
-
-        document.getElementById("imageInput").addEventListener("change", function (event) {
+        document.getElementById("imageInput").addEventListener("change", function(event) {
             let file = event.target.files[0];
             if (file) {
-                if (!file.type.startsWith('image/')) {
-                    alert("Please select a valid image file.");
-                    return;
-                }
-
                 let reader = new FileReader();
-                reader.onload = function (e) {
+                reader.onload = function(e) {
                     let img = new Image();
-                    img.onload = function () {
-                        let scale = Math.min(canvas.width / img.width, canvas.height / img.height);
-                        let x = (canvas.width - img.width * scale) / 2;
-                        let y = (canvas.height - img.height * scale) / 2;
-                        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-                        imgData.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
-                        updateValidRegions();
-                        document.getElementById("feedbackMessage").textContent = "Image loaded. Now draw on the canvas.";
+                    img.onload = function() {
+                        let scaleFactor = Math.min(MAX_WIDTH / img.width, MAX_HEIGHT / img.height);
+                        canvas.width = img.width * scaleFactor;
+                        canvas.height = img.height * scaleFactor;
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        currentImage = img; // Store the image object
                     };
                     img.src = e.target.result;
                 };
@@ -86,58 +77,69 @@
             }
         });
 
-        function draw(event, x, y) {
-            let clipSize = parseInt(clipSizeSlider.value, 10);
-            let canvasX = x - canvas.offsetLeft;
-            let canvasY = y - canvas.offsetTop;
-
-            if (canvasX < 0 || canvasY < 0 || canvasX > canvas.width || canvasY > canvas.height) return;
-
-            if (imgData.length > 0 && validRegions.length > 0) {
-                let randomRegion = validRegions[Math.floor(Math.random() * validRegions.length)];
-                let randomX = randomRegion.x;
-                let randomY = randomRegion.y;
+        function draw(event) {
+            if (isDrawing) {
+                let x = Math.floor(Math.random() * (canvas.width - clipSize));
+                let y = Math.floor(Math.random() * (canvas.height - clipSize));
 
                 let tempCanvas = document.createElement('canvas');
                 let tempCtx = tempCanvas.getContext('2d');
-                tempCanvas.width = canvas.width;
-                tempCanvas.height = canvas.height;
-                tempCtx.putImageData(imgData[imgData.length - 1], 0, 0); // Use the most recent image data
+                tempCanvas.width = clipSize;
+                tempCanvas.height = clipSize;
+                
+                tempCtx.beginPath();
+                tempCtx.arc(clipSize / 2, clipSize / 2, clipSize / 2, 0, Math.PI * 2);
+                tempCtx.clip();
+                tempCtx.drawImage(canvas, x, y, clipSize, clipSize, 0, 0, clipSize, clipSize);
 
-                let clippedImage = tempCtx.getImageData(randomX, randomY, clipSize, clipSize);
-
-                ctx.putImageData(clippedImage, canvasX - clipSize / 2, canvasY - clipSize / 2);
+                ctx.drawImage(tempCanvas, event.clientX - canvas.offsetLeft - clipSize / 2, event.clientY - canvas.offsetTop - clipSize / 2);
             }
         }
 
+        // Mouse events
         canvas.addEventListener("mousedown", () => isDrawing = true);
         canvas.addEventListener("mouseup", () => isDrawing = false);
-        canvas.addEventListener("mousemove", (event) => draw(event, event.clientX, event.clientY));
+        canvas.addEventListener("mousemove", draw);
 
-        canvas.addEventListener("touchstart", function (e) {
+        // Touch events for mobile
+        canvas.addEventListener("touchstart", function(e) {
             e.preventDefault();
             isDrawing = true;
         });
         canvas.addEventListener("touchend", () => isDrawing = false);
-        canvas.addEventListener("touchmove", function (e) {
+        canvas.addEventListener("touchmove", function(e) {
             e.preventDefault();
             let touch = e.touches[0];
-            draw(e, touch.clientX, touch.clientY);
+            draw(touch);
         });
 
-        document.getElementById("clearCanvas").addEventListener("click", function () {
+        // Save button
+document.getElementById("saveButton").addEventListener("click", function() {
+    let link = document.createElement("a");
+    link.href = canvas.toDataURL();
+    
+    let currentDate = new Date();
+    let month = String(currentDate.getMonth() + 1).padStart(2, '0'); // Months are 0-based in JS
+    let day = String(currentDate.getDate()).padStart(2, '0');
+    let year = currentDate.getFullYear();
+    let hour = ((currentDate.getHours() + 11) % 12 + 1); // Convert 24-hour time to 12-hour time format
+    let minute = String(currentDate.getMinutes()).padStart(2, '0');
+    let ampm = currentDate.getHours() >= 12 ? 'P' : 'A';
+
+    link.download = month + day + year + ':' + hour + minute + ampm + ".png";
+    
+    link.click();
+});
+
+
+        // Clear button
+        document.getElementById("clearButton").addEventListener("click", function() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (imgData.length > 0) {
-                let tempCanvas = document.createElement('canvas');
-                let tempCtx = tempCanvas.getContext('2d');
-                tempCanvas.width = canvas.width;
-                tempCanvas.height = canvas.height;
-                tempCtx.putImageData(imgData[imgData.length - 1], 0, 0);
-                updateValidRegions();
+            // Re-draw the background image
+            if (currentImage) {
+                ctx.drawImage(currentImage, 0, 0, canvas.width, canvas.height);
             }
         });
-
     </script>
 </body>
-
 </html>
