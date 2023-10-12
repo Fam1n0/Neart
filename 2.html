@@ -15,12 +15,14 @@
             border: 1px solid #000;
             margin-top: 10px;
         }
+        button, input[type="range"], label {
+            margin-top: 10px;
+        }
         button {
             padding: 10px 20px;
             background-color: #333;
             color: #fff;
             border: none;
-            margin-top: 10px;
             cursor: pointer;
             border-radius: 5px;
         }
@@ -30,6 +32,9 @@
     <h2>Upload and Draw with Random Clips</h2>
     <input type="file" id="imageInput">
     <br>
+    <label for="clipSizeRange">Clip Size: <span id="clipSizeLabel">20</span></label>
+    <input type="range" id="clipSizeRange" min="10" max="100" value="20">
+    <br>
     <canvas id="drawingCanvas"></canvas>
     <br>
     <button id="saveButton">Save Canvas</button>
@@ -37,7 +42,16 @@
     <script>
         const canvas = document.getElementById("drawingCanvas");
         const ctx = canvas.getContext("2d");
+        const clipSizeRange = document.getElementById("clipSizeRange");
+        const clipSizeLabel = document.getElementById("clipSizeLabel");
+
+        let clipSize = parseInt(clipSizeRange.value);
         let isDrawing = false;
+
+        clipSizeRange.addEventListener('input', function() {
+            clipSize = parseInt(clipSizeRange.value);
+            clipSizeLabel.textContent = clipSize;
+        });
 
         document.getElementById("imageInput").addEventListener("change", function(event) {
             let file = event.target.files[0];
@@ -58,7 +72,6 @@
 
         function draw(event) {
             if (isDrawing) {
-                let clipSize = 20;
                 let x = Math.floor(Math.random() * (canvas.width - clipSize));
                 let y = Math.floor(Math.random() * (canvas.height - clipSize));
 
@@ -67,13 +80,12 @@
                 tempCanvas.width = clipSize;
                 tempCanvas.height = clipSize;
                 
+                tempCtx.beginPath();
+                tempCtx.arc(clipSize / 2, clipSize / 2, clipSize / 2, 0, Math.PI * 2);
+                tempCtx.clip();
                 tempCtx.drawImage(canvas, x, y, clipSize, clipSize, 0, 0, clipSize, clipSize);
 
-                ctx.beginPath();
-                ctx.arc(event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop, clipSize / 2, 0, Math.PI * 2);
-                ctx.clip();
                 ctx.drawImage(tempCanvas, event.clientX - canvas.offsetLeft - clipSize / 2, event.clientY - canvas.offsetTop - clipSize / 2);
-                ctx.restore();
             }
         }
 
