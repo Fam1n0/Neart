@@ -37,7 +37,6 @@
     <script>
         const canvas = document.getElementById("drawingCanvas");
         const ctx = canvas.getContext("2d");
-        let imgData;
         let isDrawing = false;
 
         document.getElementById("imageInput").addEventListener("change", function(event) {
@@ -50,8 +49,6 @@
                         canvas.width = img.width;
                         canvas.height = img.height;
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
                     };
                     img.src = e.target.result;
                 };
@@ -60,18 +57,23 @@
         });
 
         function draw(event) {
-            if (isDrawing && imgData) {
+            if (isDrawing) {
                 let clipSize = 20;
                 let x = Math.floor(Math.random() * (canvas.width - clipSize));
                 let y = Math.floor(Math.random() * (canvas.height - clipSize));
 
-                // Clip circular section
+                let tempCanvas = document.createElement('canvas');
+                let tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = clipSize;
+                tempCanvas.height = clipSize;
+                
+                tempCtx.drawImage(canvas, x, y, clipSize, clipSize, 0, 0, clipSize, clipSize);
+
                 ctx.beginPath();
                 ctx.arc(event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop, clipSize / 2, 0, Math.PI * 2);
                 ctx.clip();
-
-                ctx.drawImage(canvas, 0, 0);
-                ctx.drawImage(canvas, -x, -y);
+                ctx.drawImage(tempCanvas, event.clientX - canvas.offsetLeft - clipSize / 2, event.clientY - canvas.offsetTop - clipSize / 2);
+                ctx.restore();
             }
         }
 
